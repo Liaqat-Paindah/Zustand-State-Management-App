@@ -1,8 +1,12 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, models } from "mongoose";
 
-export const userSchema = new Schema(
+const userSchema = new Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     email: {
       type: String,
       required: true,
@@ -10,11 +14,16 @@ export const userSchema = new Schema(
       trim: true,
       lowercase: true,
     },
-    password: { type: String, required: true, minlength: 6, trim: true },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+      trim: true,
+    },
   },
   {
     timestamps: true,
   },
 );
 
-export const User = model("User", userSchema);
+export const User = models.User || model("User", userSchema);
