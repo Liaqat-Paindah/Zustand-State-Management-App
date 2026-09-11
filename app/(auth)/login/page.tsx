@@ -18,21 +18,44 @@ const Login = () => {
     handleBlur,
     handleSubmit,
     isSubmitting,
+    status,
   } = useFormik({
     initialValues: {
-      name: "",
       id: 2,
       email: "",
       password: "",
     },
     validationSchema: userSchema,
-    onSubmit: (values) => {
-      login({
-        name: values.name,
-        id: values.id,
-        email: values.email,
-      });
-      router.push("/products");
+    onSubmit: async (values, { setStatus }) => {
+      setStatus(undefined);
+
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: values.email,
+            password: values.password,
+          }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setStatus(data.message ?? "Unable to sign in");
+          return;
+        }
+
+        login({
+          id: String(data.user.id),
+          name: data.user.name,
+          email: data.user.email,
+        });
+        router.push("/products");
+      } catch {
+        setStatus("Unable to sign in. Please try again.");
+      }
     },
   });
 
@@ -49,24 +72,11 @@ const Login = () => {
           <p className="text-center text-sm text-gray-400 py-2">
             Welcome back to Nextify Zustand State Management App.
           </p>
-          <div className="py-2">
-            <label className="text-gray-400" htmlFor="">
-              Name:
-            </label>
-            <Input
-              name="name"
-              id="name"
-              type="text"
-              className="rounded-sm"
-              placeholder="Etner your name"
-              value={values.name}
-              onChange={handleChange}
-              onBlur={handleBlur}
-            />
-            {touched.name && errors.name && (
-              <span className="text-sm text-red-700">{errors.name}</span>
-            )}
-          </div>
+          {status ? (
+            <p className="text-sm text-red-700" role="alert">
+              {status}
+            </p>
+          ) : null}
           <div className="py-2">
             <label className="text-gray-400" htmlFor="">
               Email:

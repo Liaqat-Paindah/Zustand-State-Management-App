@@ -1,64 +1,72 @@
-import dbConnect from "@/lib/db";
 import { User } from "@/models/user";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import dbConnect from "@/lib/db";
+import { generateToken } from "@/lib/auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    // Connect to database
+    const { email, password } = await req.json();
+
+    // 1. Validate input
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email and password are required",
+        },
+        { status: 400 },
+      );
+    }
+
+    // 2. Normalize email
+    const normalEmail = email.toLowerCase().trim();
+
+    // 3. Connect to database
     await dbConnect();
 
-    // Get request body
-    const { name, email, password } = await req.json();
+    // 4. Find user
+    const user = await User.findOne({
+      email: normalEmail,
+    });
 
-    // Validate required fields
-    if (!name || !email || !password) {
+    // 5. Use the same message for both cases
+    if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "Name, email, and password are required",
+          message: "Invalid email or password",
         },
-        {
-          status: 400,
-        },
+        { status: 401 },
       );
     }
 
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    // 6. Compare password with hashed password
+    const passwordValid = await bcrypt.compare(password, user.password);
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      email: normalizedEmail,
-    });
-
-    if (existingUser) {
+    if (!passwordValid) {
       return NextResponse.json(
         {
           success: false,
-          message: "A user with this email already exists",
+          message: "Invalid email or password",
         },
-        {
-          status: 409,
-        },
+        { status: 401 },
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // 7. Generate JWT
+    const token = generateToken(user._id.toString());
 
-    // Create user
-    const user = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-    });
-
-    // Return successful response
-    return NextResponse.json(
+    // 8. Create response
+    const response = NextResponse.json(
       {
         success: true,
-        message: "User registered successfully",
+        message: "Login successful",
         user: {
           id: user._id.toString(),
           name: user.name,
@@ -66,16 +74,28 @@ export async function POST(req: Request) {
         },
       },
       {
-        status: 201,
+        status: 200,
       },
     );
+
+    // 9. Store JWT in HttpOnly cookie
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    // 10. Return response
+    return response;
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("Login error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
+        message: "Something went wrong. Please try again.",
       },
       {
         status: 500,
