@@ -13,12 +13,17 @@ const Products = () => {
   const removeProduct = useCart((state) => state.removeProduct);
   const clear = useCart((state) => state.clear);
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
+  const isAuthLoading = useAuth((state) => state.isLoading);
   const router = useRouter();
   useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isAuthLoading, router]);
 
   const { values, handleChange, handleSubmit, handleBlur, resetForm } =
     useFormik({
@@ -51,6 +56,10 @@ const Products = () => {
     (total, product) => total + product.price * product.quantity,
     0,
   );
+
+  if (isAuthLoading) {
+    return <div>Checking your session...</div>;
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4">
