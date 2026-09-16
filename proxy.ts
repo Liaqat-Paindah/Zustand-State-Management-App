@@ -6,6 +6,8 @@ const PUBLIC_ROUTES = [
   "/register",
   "/api/auth/login",
   "/api/auth/register",
+  "/api/auth/register",
+  "/products"
 ];
 
 interface JwtPayload {
