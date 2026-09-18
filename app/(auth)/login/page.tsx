@@ -61,16 +61,25 @@ const Login = () => {
 
   return (
     <div>
+   
       <form
         onSubmit={handleSubmit}
-        className="min-h-screen items-center justify-center flex bg-gray-800"
+        className="min-h-screen items-center justify-center flex "
       >
-        <div className="w-full max-w-md bg-gray-900 p-8 rounded-sm shadow-lg">
-          <h1 className="text-2xl justify-center text-center font-bold text-gray-300 ">
-            Sign-In Docker Host
+        
+        <div className="w-full max-w-md  p-8 bg-white  rounded-sm border border-slate-200   shadow-sm dark:border-white/10 dark:bg-white/5 ">
+          <h1 className="text-2xl justify-center text-center font-bold text-gray-700 ">
+            Sign-In  
           </h1>
-          <p className="text-center text-sm text-gray-400 py-2">
-            Welcome back to Nextify Zustand State Management App.
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-0 h-125 w-125 -translate-x-1/2 rounded-sm bg-blue-500/10 blur-[120px] dark:bg-cyan-500/10" />
+
+        <div className="absolute -left-32 top-1/3 h-72 w-72 rounded-sm bg-purple-500/10 blur-[100px]" />
+
+        <div className="absolute -right-32 bottom-0 h-72 w-72 rounded-sm bg-cyan-500/10 blur-[100px]" />
+      </div>
+          <p className="text-center text-sm text-gray-700 py-2">
+            Welcome to Nextify Services
           </p>
           {status ? (
             <p className="text-sm text-red-700" role="alert">
@@ -78,15 +87,15 @@ const Login = () => {
             </p>
           ) : null}
           <div className="py-2">
-            <label className="text-gray-400" htmlFor="">
+            <label className="text-gray-700" htmlFor="">
               Email:
             </label>
             <Input
               name="email"
               id="email"
               type="text"
-              className="rounded-sm"
-              placeholder="Etner your Email"
+              className="rounded-sm my-2"
+              placeholder="Info@yourbusiness.com"
               value={values.email}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -98,15 +107,15 @@ const Login = () => {
             )}
           </div>{" "}
           <div className="py-2">
-            <label className="text-gray-400" htmlFor="">
+            <label className="text-gray-700" htmlFor="">
               Password:
             </label>
             <Input
               name="password"
               id="password"
               type="password"
-              className="rounded-sm"
-              placeholder="Etner your Password"
+              className="rounded-sm my-2"
+              placeholder="******"
               value={values.password}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -119,7 +128,7 @@ const Login = () => {
           </div>
           <Button
             type="submit"
-            className="mt-4 flex h-11 w-full items-center justify-center gap-2 cursor-pointer rounded-md bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-4 flex h-11 w-full items-center justify-center gap-2 cursor-pointer rounded-md bg-linear-to-r from-cyan-500 via-blue-600 to-purple-600 text-white shadow-sm shadow-blue-500/25 hover:scale-[1.02] hover:shadow-sm hover:shadow-blue-500/30"
           >
             {isSubmitting ? (
               <>

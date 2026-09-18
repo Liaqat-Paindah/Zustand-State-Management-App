@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, Sparkles, ShieldCheck, Zap } from "lucide-react";
-import Link from "next/link";
+import { useAuth } from "@/stores/userAuth";
+import { useRouter } from "next/navigation";
 
 type BillingInterval = "monthly" | "yearly";
 
@@ -77,7 +78,17 @@ const plans: Plan[] = [
 ];
 
 export default function Pricing() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const [billing, setBilling] = useState<BillingInterval>("monthly");
+  const handleNext = (paymentLink: string) => {
+    if (isAuthenticated) {
+      router.push(paymentLink);
+    } else {
+      localStorage.setItem("paymentLink", paymentLink);
+      router.push("/login");
+    }
+  };
 
   return (
     <section className="relative overflow-hidden bg-white px-4 py-24 text-slate-900 transition-colors dark:bg-[#050816] dark:text-white sm:px-6 lg:px-8">
@@ -211,10 +222,9 @@ export default function Pricing() {
                   </div>
 
                   {/* CTA */}
-                  <Link
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href={paymentLink}
+                  <button
+                    type="button"
+                    onClick={() => handleNext(paymentLink)}
                     className={`mt-8 flex w-full items-center justify-center gap-2 rounded-sm px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${
                       plan.popular
                         ? "bg-linear-to-r from-cyan-500 via-blue-600 to-purple-600 text-white shadow-sm shadow-blue-500/25 hover:scale-[1.02] hover:shadow-sm hover:shadow-blue-500/30"
@@ -223,7 +233,7 @@ export default function Pricing() {
                   >
                     Get started
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
+                  </button>
 
                   {/* Divider */}
                   <div className="my-8 h-px bg-slate-200 dark:bg-white/10" />
