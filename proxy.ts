@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
   "/register",
   "/api/auth/login",
   "/api/auth/register",
+  "/api/stripe/webhook",
   "/api/auth/register",
   "/products"
 ];
