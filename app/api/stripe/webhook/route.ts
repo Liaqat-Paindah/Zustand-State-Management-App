@@ -61,20 +61,37 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log("Checkout completed:", session.id);
+
         if (session.mode !== "subscription") {
+          console.log("Checkout is not a subscription:", session.mode);
           break;
         }
-        const customerId = session.customer as string ;
-        const subscriptionId =     session.subscription as string;
+
+        const customerId =
+          typeof session.customer === "string" ? session.customer : null;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : null;
 
         if (!customerId || !subscriptionId) {
-          console.error("Missing Stripe customer or subscription ID");
+          console.error("Missing Stripe customer or subscription ID:", {
+            sessionId: session.id,
+            customerId,
+            subscriptionId,
+          });
           break;
         }
+
         const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
         await stripe.customers.retrieve(customerId);
 
         const userId = session.metadata?.userId;
+        console.log("Finding user for Stripe checkout:", {
+          sessionId: session.id,
+          userId: userId ?? null,
+          email: session.customer_details?.email ?? null,
+        });
 
         let user;
 
@@ -142,7 +159,7 @@ export async function POST(req: NextRequest) {
         /**
          * Create/update local subscription
          */
-        await Subscription.findOneAndUpdate(
+        const savedSubscription = await Subscription.findOneAndUpdate(
           {
             provider: "stripe",
             provider_subscription_id: stripeSubscription.id,
@@ -182,7 +199,11 @@ export async function POST(req: NextRequest) {
           },
         );
 
-        console.log("Subscription created/updated:", stripeSubscription.id);
+        console.log("Subscription created/updated:", {
+          id: savedSubscription?._id.toString(),
+          stripeSubscriptionId: stripeSubscription.id,
+          userId: user._id.toString(),
+        });
 
         break;
       }
