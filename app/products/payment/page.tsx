@@ -15,8 +15,6 @@ interface Plan {
   description: string;
   monthlyPrice: number;
   yearlyPrice: number;
-  monthlyPaymentLink: string;
-  yearlyPaymentLink: string;
   features: string[];
   popular?: boolean;
 }
@@ -28,15 +26,6 @@ const plans: Plan[] = [
     description: "Everything you need to build and grow your business.",
     monthlyPrice: 10,
     yearlyPrice: 99,
-
-    monthlyPaymentLink:
-      process.env.NEXT_PUBLIC_STRIPE_MONTHLY_STANDARD_PLAN_LINK ||
-      "price_standard_monthly",
-
-    yearlyPaymentLink:
-      process.env.NEXT_PUBLIC_STRIPE_YEARLY_STANDARD_PLAN_LINK ||
-      "price_standard_yearly",
-
     features: [
       "Up to 5 team members",
       "10 active projects",
@@ -53,15 +42,6 @@ const plans: Plan[] = [
     description: "Advanced tools and support for growing organizations.",
     monthlyPrice: 25,
     yearlyPrice: 199,
-
-    monthlyPaymentLink:
-      process.env.NEXT_PUBLIC_STRIPE_MONTHLY_ENTERPRISE_PLAN_LINK ||
-      "price_enterprise_monthly",
-
-    yearlyPaymentLink:
-      process.env.NEXT_PUBLIC_STRIPE_YEARLY_ENTERPRISE_PLAN_LINK ||
-      "price_enterprise_yearly",
-
     popular: true,
 
     features: [
@@ -81,12 +61,38 @@ export default function Pricing() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [billing, setBilling] = useState<BillingInterval>("monthly");
-  const handleNext = (paymentLink: string) => {
-    if (isAuthenticated) {
-      router.push(paymentLink);
-    } else {
-      localStorage.setItem("paymentLink", paymentLink);
+  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleNext = async (plan: PlanId) => {
+    if (!isAuthenticated) {
       router.push("/login");
+      return;
+    }
+
+    setLoadingPlan(plan);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, billing }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        throw new Error(data.message ?? "Unable to start checkout");
+      }
+
+      window.location.assign(data.url);
+    } catch (checkoutError) {
+      setError(
+        checkoutError instanceof Error
+          ? checkoutError.message
+          : "Unable to start checkout",
+      );
+      setLoadingPlan(null);
     }
   };
 
@@ -155,11 +161,6 @@ export default function Pricing() {
             const price =
               billing === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
 
-            const paymentLink =
-              billing === "monthly"
-                ? plan.monthlyPaymentLink
-                : plan.yearlyPaymentLink;
-
             return (
               <div
                 key={plan.id}
@@ -224,14 +225,15 @@ export default function Pricing() {
                   {/* CTA */}
                   <button
                     type="button"
-                    onClick={() => handleNext(paymentLink)}
+                    onClick={() => handleNext(plan.id)}
+                    disabled={loadingPlan !== null}
                     className={`mt-8 flex w-full items-center justify-center gap-2 rounded-sm px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${
                       plan.popular
                         ? "bg-linear-to-r from-cyan-500 via-blue-600 to-purple-600 text-white shadow-sm shadow-blue-500/25 hover:scale-[1.02] hover:shadow-sm hover:shadow-blue-500/30"
                         : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                     }`}
                   >
-                    Get started
+                    {loadingPlan === plan.id ? "Starting checkout..." : "Get started"}
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </button>
 
@@ -264,6 +266,12 @@ export default function Pricing() {
             );
           })}
         </div>
+
+        {error && (
+          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
 
         {/* Bottom trust section */}
         <div className="mx-auto mt-12 flex max-w-3xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
