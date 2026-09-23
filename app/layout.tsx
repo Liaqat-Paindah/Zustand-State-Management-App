@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import Header from "@/components/common/navbar";
+import QueryProvider from "@/components/providers/QueryProvider";
+
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -42,6 +44,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {" "}
+        <QueryProvider>
+
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -54,6 +58,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </AuthProvider>
         </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

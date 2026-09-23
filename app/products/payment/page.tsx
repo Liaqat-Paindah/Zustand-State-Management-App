@@ -1,23 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Sparkles, ShieldCheck, Zap } from "lucide-react";
-import { useAuth } from "@/stores/userAuth";
+import { ArrowRight, Check, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-type BillingInterval = "monthly" | "yearly";
+import { useAuth } from "@/stores/userAuth";
+import { useCheckout } from "@/hooks/useCheckout";
 
-type PlanId = "standard" | "enterprise";
-
-interface Plan {
-  id: PlanId;
-  name: string;
-  description: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: string[];
-  popular?: boolean;
-}
+import type { BillingInterval, Plan, PlanId } from "@/types/billing";
 
 const plans: Plan[] = [
   {
@@ -35,7 +25,6 @@ const plans: Plan[] = [
       "API access",
     ],
   },
-
   {
     id: "enterprise",
     name: "Enterprise",
@@ -43,7 +32,6 @@ const plans: Plan[] = [
     monthlyPrice: 25,
     yearlyPrice: 199,
     popular: true,
-
     features: [
       "Unlimited team members",
       "Unlimited projects",
@@ -60,40 +48,28 @@ const plans: Plan[] = [
 export default function Pricing() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+
   const [billing, setBilling] = useState<BillingInterval>("monthly");
+
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
-  const handleNext = async (plan: PlanId) => {
+  const checkout = useCheckout();
+
+  const handleNext = (planId: PlanId) => {
     if (!isAuthenticated) {
       router.push("/login");
       return;
     }
 
-    setLoadingPlan(plan);
+    setLoadingPlan(planId);
     setError(null);
 
-    try {
-      const response = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, billing }),
-      });
-      const data = await response.json();
-
-      if (!response.ok || !data.url) {
-        throw new Error(data.message ?? "Unable to start checkout");
-      }
-
-      window.location.assign(data.url);
-    } catch (checkoutError) {
-      setError(
-        checkoutError instanceof Error
-          ? checkoutError.message
-          : "Unable to start checkout",
-      );
-      setLoadingPlan(null);
-    }
+    checkout.mutate({
+      planId,
+      billing,
+    });
   };
 
   return (
@@ -129,6 +105,7 @@ export default function Pricing() {
             <button
               type="button"
               onClick={() => setBilling("monthly")}
+              disabled={checkout.isPending}
               className={`relative rounded-sm px-6 py-2.5 text-sm font-semibold transition-all duration-300 ${
                 billing === "monthly"
                   ? "bg-white text-slate-900 shadow-sm dark:bg-white/10 dark:text-white"
@@ -141,6 +118,7 @@ export default function Pricing() {
             <button
               type="button"
               onClick={() => setBilling("yearly")}
+              disabled={checkout.isPending}
               className={`relative rounded-sm px-6 py-2.5 text-sm font-semibold transition-all duration-300 ${
                 billing === "yearly"
                   ? "bg-white text-slate-900 shadow-sm dark:bg-white/10 dark:text-white"
@@ -160,6 +138,8 @@ export default function Pricing() {
           {plans.map((plan) => {
             const price =
               billing === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
+
+            const isLoading = loadingPlan === plan.id;
 
             return (
               <div
@@ -226,15 +206,18 @@ export default function Pricing() {
                   <button
                     type="button"
                     onClick={() => handleNext(plan.id)}
-                    disabled={loadingPlan !== null}
-                    className={`mt-8 flex w-full items-center justify-center gap-2 rounded-sm px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${
+                    disabled={checkout.isPending}
+                    className={`mt-8 flex w-full items-center justify-center gap-2 rounded-sm px-5 py-3.5 text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                       plan.popular
                         ? "bg-linear-to-r from-cyan-500 via-blue-600 to-purple-600 text-white shadow-sm shadow-blue-500/25 hover:scale-[1.02] hover:shadow-sm hover:shadow-blue-500/30"
                         : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                     }`}
                   >
-                    {loadingPlan === plan.id ? "Starting checkout..." : "Get started"}
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    {isLoading ? "Starting checkout..." : "Get started"}
+
+                    {!isLoading && (
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    )}
                   </button>
 
                   {/* Divider */}
@@ -267,8 +250,12 @@ export default function Pricing() {
           })}
         </div>
 
+        {/* Error */}
         {error && (
-          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-red-600" role="alert">
+          <p
+            className="mx-auto mt-6 max-w-3xl text-center text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         )}
